@@ -56,7 +56,30 @@ handle([<<"two">>], Req, State) ->
 		   list_to_integer(binary_to_list(Time0))
 	   end,
     try
-	{ok, Client0} = connect_backend(),
+	{ok, Client0} = connect_backend(kolus_demo_tcp_transport),
+	{ok, Body, Client1} = hackney:body(Client0),
+	{ok, Req1} = cowboy_req:chunked_reply(200, Req),
+	ok = cowboy_req:chunk(<<"Got connected to backend ", Body/binary, "\r\n">>, Req1),
+	timer:sleep(Time),
+	hackney:close(Client1),
+	{ok, Req1, State}
+    catch
+	no_backends ->
+	    {ok, Req0} = cowboy_req:reply(503, [], <<>>, Req),
+	    {ok, Req0, State};
+	full ->
+	    {ok, Req0} = cowboy_req:reply(502, [], <<>>, Req),
+	    {ok, Req0, State}
+    end;
+handle([<<"three">>], Req, State) ->
+    Time = case cowboy_req:qs_val(<<"time">>, Req) of
+	       {undefined,_} ->
+		   0;
+	       {Time0, _} ->
+		   list_to_integer(binary_to_list(Time0))
+	   end,
+    try
+	{ok, Client0} = connect_backend(kolus_demo_idle_first_tcp_transport),
 	{ok, Body, Client1} = hackney:body(Client0),
 	{ok, Req1} = cowboy_req:chunked_reply(200, Req),
 	ok = cowboy_req:chunk(<<"Got connected to backend ", Body/binary, "\r\n">>, Req1),
@@ -76,18 +99,18 @@ terminate(_,_) ->
     ok.
 
 % Internal
-connect_backend() ->
-    Client = get_client(),
+connect_backend(Module) ->
+    Client = get_client(Module),
     case hackney:send_request(Client, {get, <<"/">>, [], <<>>}) of
 	{error, closed} ->
 	    hackney:close(Client),
-	    connect_backend();
+	    connect_backend(Module);
 	{ok, _, _, Client0} ->
 	    {ok, Client0}
     end.
 
-get_client() ->
-    {ok, Client} = hackney:connect(kolus_demo_tcp_transport,
+get_client(Module) ->
+    {ok, Client} = hackney:connect(Module,
 				   "localhost", % Not important for this test.
 				   80), % Not important for this test
     Client.
