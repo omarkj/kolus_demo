@@ -1,0 +1,15 @@
+%%% -*- mode: erlang -*-
+{application, kolus_demo,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [kernel,
+                  stdlib,
+		  kolus,
+		  hackney,
+		  cowboy
+                 ]},
+  {mod, { kolus_demo_app, []}},
+  {env, []}
+ ]}.
