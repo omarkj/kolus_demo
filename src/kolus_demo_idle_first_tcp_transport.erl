@@ -17,8 +17,6 @@ connect(Host, Port, Opts) when is_list(Host), is_integer(Port) ->
 	[] ->
 	    throw(no_backends);
 	BackendStatus ->
-	    F = kolus:select(<<"backend">>, BackendStatus, fun get_preferred/1),
-	    error_logger:info_msg("F is ~p", [F]),
 	    case kolus:select(<<"backend">>, BackendStatus, fun get_preferred/1) of
 		{error, rejected} ->
 		    throw(full);
@@ -76,17 +74,17 @@ get_backends([{backend,Backend}|Rest], Res) ->
 % Choose the one with the most unused connections
 % first unless there is an idle one, then use that
 get_preferred(Backends) ->
-    F = hd(lists:sort(fun(#kolus_backend{idle=A,unused=X},
-			  #kolus_backend{idle=B,unused=Y}) ->
-			      if A > 0 ->
-				      true;
-				 true ->
-				      if B > 0 ->
-					      false;
-					 true  ->
-					      X >= Y
-				      end
-			      end
-		      end, Backends)),
-    error_logger:info_msg("F is ~p", [F]),
-    F.
+    hd(lists:sort(fun(#kolus_backend{idle=A,unused=X},
+		      #kolus_backend{idle=B,unused=Y}) ->
+			  if A > 0 ->
+				  true;
+			     true ->
+				  if B > 0 ->
+					  false;
+				     true  ->
+					  X >= Y
+				  end
+			  end
+		  end, Backends)).
+
+
